@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+  streamlit:
+    image: python:3.10-slim
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: bash -lc "pip install -r requirements.txt && streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0"
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://api:8000
