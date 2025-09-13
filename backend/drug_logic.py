@@ -1,9 +1,5 @@
 from typing import List, Dict, Optional
 import re
-from .granite_api import GraniteAPI
-
-# Global Granite instance
-granite = GraniteAPI()
 
 # Comprehensive drug database with dosage, alternatives, interactions, and uses
 _drug_db = {
@@ -227,50 +223,43 @@ def normalize_name(name: str) -> str:
 def check_interactions(drugs: List[str], gemini=None) -> Dict[str, List[str]]:
     """
     Return a dict mapping each drug to a list of potential interactions with the other provided drugs.
+    Uses Gemini API directly for fetching interactions.
     """
     normalized = [normalize_name(d) for d in drugs]
     original_drugs = {normalize_name(d): d for d in drugs}  # Keep original drug names for better output
     interactions = {}
     unrecognized_drugs = []
-    
+
     for d in normalized:
         interactions[d] = []
-        info = _drug_db.get(d)
-        if info:
-            for other in normalized:
-                if other == d:
+        if gemini:
+            res = gemini.query_drug(original_drugs.get(d, d))
+            if res and isinstance(res, dict):
+                if res.get("is_recognized") is False:
+                    unrecognized_drugs.append(original_drugs.get(d, d))
+                    interactions[d] = [f"'{original_drugs.get(d, d)}' is not a recognized medication"]
                     continue
-                # simple check: if other appears in interactions list
-                for inter in info.get("interactions", []):
-                    if inter and normalize_name(inter) in other:
-                        interactions[d].append(original_drugs.get(other, other))
+                if res.get("interactions"):
+                    for other in normalized:
+                        if other == d:
+                            continue
+                        for inter in res["interactions"]:
+                            if inter and normalize_name(inter) in other:
+                                interactions[d].append(original_drugs.get(other, other))
+                    if not interactions[d] and res["interactions"]:
+                        interactions[d] = [f"May interact with: {', '.join(res['interactions'][:5])}"]
+                        if len(res['interactions']) > 5:
+                            interactions[d][0] += " and others"
+            else:
+                interactions[d] = ["Unable to fetch interaction data from Gemini API"]
         else:
-            # fallback to Gemini for unknown drug
-            if gemini:
-                res = gemini.query_drug(original_drugs.get(d, d))
-                if res and isinstance(res, dict):
-                    if res.get("is_recognized") is False:
-                        unrecognized_drugs.append(original_drugs.get(d, d))
-                        interactions[d] = [f"'{original_drugs.get(d, d)}' is not a recognized medication"]
-                        continue
-                    if res.get("interactions"):
-                        for other in normalized:
-                            if other == d:
-                                continue
-                            for inter in res["interactions"]:
-                                if inter and normalize_name(inter) in other:
-                                    interactions[d].append(original_drugs.get(other, other))
-                        if not interactions[d] and res["interactions"]:
-                            interactions[d] = [f"May interact with: {', '.join(res['interactions'][:5])}"] 
-                            if len(res['interactions']) > 5:
-                                interactions[d][0] += " and others"
-    
-    # Add warning for unrecognized drugs
-    if unrecognized_drugs:
-        for d in normalized:
-            if d not in unrecognized_drugs and not interactions[d]:
-                interactions[d] = ["No known interactions with the provided drugs"]
-    
+            interactions[d] = ["Gemini API not available for interaction check"]
+
+    # Add note for unrecognized drugs or no interactions
+    for d in normalized:
+        if not interactions[d]:
+            interactions[d] = ["No known interactions with the provided drugs"]
+
     return interactions
 
 def get_dosage(drug: str, age: Optional[int]=30, gemini=None) -> str:
@@ -298,15 +287,11 @@ def get_dosage(drug: str, age: Optional[int]=30, gemini=None) -> str:
         return "Dosage information not found; consult a healthcare professional."
 
 def suggest_alternatives(drug: str, age: Optional[int]=30, gemini=None) -> List[str]:
-    d = normalize_name(drug)
-    # basic local alternatives
-    if d == "aspirin":
-        return ["ibuprofen (adult only)", "acetaminophen"]
-    if d in _drug_db:
-        return ["consult your healthcare provider for alternatives"]
-    # fallback to Gemini
+    """
+    Suggest alternatives for a drug using Gemini API directly.
+    """
     if gemini:
-        res = gemini.query_drug(d)
+        res = gemini.query_drug(drug)
         if res and isinstance(res, dict):
             if res.get("is_recognized") is False:
                 return [f"'{drug}' is not a recognized medication. Please consult a healthcare professional."]
@@ -315,5 +300,42 @@ def suggest_alternatives(drug: str, age: Optional[int]=30, gemini=None) -> List[
                 return alternatives
             else:
                 return ["No specific alternatives found. Please consult a healthcare professional."]
-        return ["Please consult a healthcare professional for alternatives."]
-    return ["Please consult a healthcare professional for alternatives."]
+        return ["Unable to fetch alternatives from Gemini API. Please consult a healthcare professional."]
+    return ["Gemini API not available. Please consult a healthcare professional for alternatives."]
+def get_alternatives_and_interactions_via_gemini(drug: str, gemini=None) -> Dict[str, List[str]]:
+    """
+    Fetch alternatives and interactions for a specific drug using Gemini API directly.
+
+    Args:
+        drug: Name of the drug to query.
+        gemini: GeminiAPI instance.
+
+    Returns:
+        Dict with 'alternatives' and 'interactions' lists.
+        If Gemini is not available or drug not recognized, returns empty lists with message.
+    """
+    if not gemini:
+        return {
+            "alternatives": ["Gemini API not available. Please consult a healthcare professional."],
+            "interactions": ["Gemini API not available. Please consult a healthcare professional."]
+        }
+
+    res = gemini.query_drug(drug)
+    if res and isinstance(res, dict):
+        if res.get("is_recognized") is False:
+            message = f"'{drug}' is not a recognized medication. Please consult a healthcare professional."
+            return {
+                "alternatives": [message],
+                "interactions": [message]
+            }
+        alternatives = res.get("alternatives", [])
+        interactions = res.get("interactions", [])
+        return {
+            "alternatives": alternatives if alternatives else ["No specific alternatives found. Please consult a healthcare professional."],
+            "interactions": interactions if interactions else ["No specific interactions found. Please consult a healthcare professional."]
+        }
+    else:
+        return {
+            "alternatives": ["Unable to fetch data from Gemini API. Please consult a healthcare professional."],
+            "interactions": ["Unable to fetch data from Gemini API. Please consult a healthcare professional."]
+        }

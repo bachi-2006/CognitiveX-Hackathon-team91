@@ -1,18 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from .models import extract_drug_info
-from .drug_logic import check_interactions, get_dosage, suggest_alternatives
+from .drug_logic import check_interactions, get_dosage, suggest_alternatives, get_alternatives_and_interactions_via_gemini
 from .gemini_api import GeminiAPI
-import os
-import requests
 
 app = FastAPI(title="Drug Recognition API", version="1.0")
 
-gemini_api = GeminiAPI(
-    api_key=os.environ.get("GEMINI_API_KEY"),
-    endpoint=os.environ.get("GEMINI_ENDPOINT"),
-    model=os.environ.get("GEMINI_MODEL")
-)
+gemini_api = GeminiAPI()
 if not gemini_api.api_key or not gemini_api.base_url:
     print("Warning: Gemini API key or endpoint not set. MediBot functionality may be limited.")
 
@@ -22,9 +16,29 @@ class ExtractRequest(BaseModel):
 class InteractionRequest(BaseModel):
     drugs: list[str]
 
+
 class DosageRequest(BaseModel):
     drug: str
     age: int = 30
+
+class ChildDosageRequest(BaseModel):
+    drug: str
+    age: int = 10
+    weight: float = 30.0
+@app.post("/get_child_dosage")
+def get_child_dosage_endpoint(request: ChildDosageRequest):
+    """
+    Calculate dosage for children using IBM Granite model.
+    """
+    try:
+        # --- IBM Granite API integration ---
+        # Replace the following with actual IBM Granite API call
+        # For now, simulate response
+        dosage = f"Recommended child dosage for {request.drug}: {request.weight * 10} mg (simulated by IBM Granite)"
+        return {"dosage": dosage}
+    except Exception as e:
+        print(f"Error in child dosage endpoint: {e}")
+        return {"dosage": "Error calculating child dosage. Please consult a healthcare professional."}
 
 class AlternativeRequest(BaseModel):
     drug: str
@@ -39,6 +53,9 @@ class BMIRequest(BaseModel):
     height: float  # in cm
     age: int = 30
     gender: str = ""  # Optional
+
+class DrugAlternativesInteractionsRequest(BaseModel):
+    drug: str
 
 @app.post("/extract")
 def extract_endpoint(req: ExtractRequest):
@@ -77,6 +94,11 @@ def get_dosage_endpoint(request: DosageRequest):
 def suggest_alternatives_endpoint(request: AlternativeRequest):
     alternatives = suggest_alternatives(request.drug, request.age, gemini_api)
     return {"alternatives": alternatives}
+
+@app.post("/get_drug_alternatives_interactions")
+def get_drug_alternatives_interactions_endpoint(request: DrugAlternativesInteractionsRequest):
+    result = get_alternatives_and_interactions_via_gemini(request.drug, gemini_api)
+    return result
 
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest):
