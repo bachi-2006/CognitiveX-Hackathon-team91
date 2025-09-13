@@ -1,6 +1,9 @@
 from typing import List, Dict, Optional
 import re
-from .gemini_api import GeminiAPI
+from .granite_api import GraniteAPI
+
+# Global Granite instance
+granite = GraniteAPI()
 
 # Comprehensive drug database with dosage, alternatives, interactions, and uses
 _drug_db = {
