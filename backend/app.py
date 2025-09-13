@@ -92,7 +92,12 @@ def get_dosage_endpoint(request: DosageRequest):
 
 @app.post("/suggest_alternatives")
 def suggest_alternatives_endpoint(request: AlternativeRequest):
-    alternatives = suggest_alternatives(request.drug, request.age, gemini_api)
+    # Always fetch alternatives directly from Gemini API, no local fallback
+    try:
+        alternatives = suggest_alternatives(request.drug, request.age, gemini_api)
+    except Exception as e:
+        print(f"Error fetching alternatives from Gemini: {e}")
+        alternatives = ["Unable to fetch alternatives from Gemini API. Please consult a healthcare professional."]
     return {"alternatives": alternatives}
 
 @app.post("/get_drug_alternatives_interactions")

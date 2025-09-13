@@ -22,7 +22,7 @@ st.markdown("""
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #2c3e50;
-        background: linear-gradient(135deg, #1E2F3E, #2A3F5F);
+        background: linear-gradient(135deg, #1E2F3E, #2980B9);
     }
     
     .main-header {
@@ -40,7 +40,7 @@ st.markdown("""
     }
     /* Enhanced button styles with better transitions */
     .stButton>button {
-        background: linear-gradient(135deg, #FF6E7F, #BFE9FF);
+        background: linear-gradient(135deg, #2980B9, #6DD5FA);
         color: white;
         border-radius: 8px;
         padding: 10px 24px;
@@ -49,7 +49,7 @@ st.markdown("""
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .stButton>button:hover {
-        background: linear-gradient(135deg, #FF6E7F, #BFE9FF);
+        background: linear-gradient(135deg, #2980B9, #6DD5FA);
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
@@ -68,14 +68,14 @@ st.markdown("""
         margin: 10px 0;
     }
     .card {
-        background: linear-gradient(135deg, #2A3F5F, #1E2F3E);
+        background: linear-gradient(135deg, #2980B9, #1E2F3E);
         color: white;
         border-radius: 10px;
         padding: 20px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 20px;
         transition: transform 0.3s ease;
-        border-left: 4px solid #FF6E7F;
+        border-left: 4px solid #2980B9;
     }
     .card:hover {
         transform: translateY(-5px);
@@ -84,21 +84,21 @@ st.markdown("""
     .feature-icon {
         font-size: 2.5em;
         margin-bottom: 10px;
-        color: #FF6E7F;
+        color: #2980B9;
     }
     .login-container {
         max-width: 500px;
         margin: 0 auto;
         padding: 30px;
-        background: linear-gradient(135deg, #2A3F5F, #1E2F3E);
+        background: linear-gradient(135deg, #2980B9, #1E2F3E);
         color: white;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        border-top: 4px solid #FF6E7F;
+        border-top: 4px solid #2980B9;
     }
     .login-header {
         text-align: center;
-        color: #FF6E7F;
+        color: #2980B9;
         margin-bottom: 25px;
     }
     .stTextInput>div>div>input {
@@ -113,14 +113,14 @@ st.markdown("""
         flex-direction: column;
     }
     .chat-message.user {
-        background: linear-gradient(135deg, #2A3F5F, #1E2F3E);
+        background: linear-gradient(135deg, #2980B9, #1E2F3E);
         color: white;
-        border-left: 5px solid #FF6E7F;
+        border-left: 5px solid #2980B9;
     }
     .chat-message.bot {
-        background: linear-gradient(135deg, #1E2F3E, #2A3F5F);
+        background: linear-gradient(135deg, #1E2F3E, #2980B9);
         color: white;
-        border-left: 5px solid #BFE9FF;
+        border-left: 5px solid #6DD5FA;
     }
     .chat-message .message-content {
         margin-top: 0;
@@ -158,6 +158,17 @@ st.markdown("""
         font-size: 0.9em;
         border-top: 1px solid #eee;
     }
+    /* Hover highlight for dosage/frequency */
+    .hover-highlight {
+        transition: background 0.3s, color 0.3s;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    .hover-highlight:hover {
+        background: #FF6E7F33;
+        color: #FF6E7F;
+        cursor: pointer;
+    }
     /* Enhanced animations */
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
@@ -187,7 +198,7 @@ st.markdown("""
         transition: all 0.2s ease;
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #FF6E7F, #BFE9FF) !important;
+        background: linear-gradient(135deg, #2980B9, #6DD5FA) !important;
         color: white !important;
         box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
     }
@@ -406,17 +417,18 @@ def show_main_app():
                         st.subheader("📋 Parsed (neat text)")
                         st.code(data.get("plain_text",""), language=None)
                         
-                        # Display structured data in a more visual way
+                        # Display structured data in a more visual way with hover and animation
                         st.subheader("Structured Data")
                         structured = data.get("structured", [])
                         if structured:
                             for i, drug_info in enumerate(structured):
                                 with st.container():
                                     st.markdown(f"""
-                                    <div class='card'>
+                                    <div class='card animate-fadeIn' style='animation-delay: {0.1 + i*0.1}s;'>
                                         <h3>{drug_info.get('name', 'Unknown Drug')}</h3>
-                                        <p><strong>Dosage:</strong> {drug_info.get('dosage', 'Not specified')}</p>
-                                        <p><strong>Frequency:</strong> {drug_info.get('frequency', 'Not specified')}</p>
+                                        <p><strong>Dosage:</strong> <span class='hover-highlight'>{drug_info.get('dosage', 'Not specified')}</span></p>
+                                        <p><strong>Frequency:</strong> <span class='hover-highlight'>{drug_info.get('frequency', 'Not specified')}</span></p>
+                                        <p><strong>Symptom:</strong> <span class='hover-highlight'>{drug_info.get('symptom', 'Not specified')}</span></p>
                                     </div>
                                     """, unsafe_allow_html=True)
                         
@@ -436,15 +448,27 @@ def show_main_app():
         subtabs = st.tabs(["💊 Dosage", "⚠️ Interactions", "🔄 Alternatives"])
     
         with subtabs[0]:
+            if age < 18:
+                weight = st.number_input("Weight (kg) [for children]", min_value=5.0, max_value=150.0, value=30.0, step=0.1, key="weight_input")
+            else:
+                weight = None
             if st.button("Get Dosage", key="dosage_btn"):
                 if not drug.strip():
                     st.warning("Please enter a drug name.")
                 else:
                     with st.spinner("Fetching dosage..."):
-                        r = requests.post(f"{BACKEND}/get_dosage", json={"drug": drug, "age": age})
+                        if age < 18:
+                            r = requests.post(f"{BACKEND}/get_child_dosage", json={"drug": drug, "age": age, "weight": weight})
+                        else:
+                            r = requests.post(f"{BACKEND}/get_dosage", json={"drug": drug, "age": age})
                     if r.status_code == 200:
-                        st.markdown("**💊 Dosage:**")
-                        st.info(r.json().get("dosage"))
+                            dosage_val = r.json().get("dosage")
+                            if age < 18:
+                                # Only show the dosage amount, no text
+                                st.info(f"{dosage_val}")
+                            else:
+                                st.markdown("**💊 Dosage:**")
+                                st.info(dosage_val)
                     else:
                         st.error("Error fetching dosage.")
     

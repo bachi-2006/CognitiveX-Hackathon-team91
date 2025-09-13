@@ -288,18 +288,14 @@ def get_dosage(drug: str, age: Optional[int]=30, gemini=None) -> str:
 
 def suggest_alternatives(drug: str, age: Optional[int]=30, gemini=None) -> List[str]:
     """
-    Suggest alternatives for a drug using Gemini API directly.
+    Always respond directly from Gemini API for alternatives.
     """
     if gemini:
         res = gemini.query_drug(drug)
         if res and isinstance(res, dict):
             if res.get("is_recognized") is False:
                 return [f"'{drug}' is not a recognized medication. Please consult a healthcare professional."]
-            alternatives = res.get("alternatives", [])
-            if alternatives:
-                return alternatives
-            else:
-                return ["No specific alternatives found. Please consult a healthcare professional."]
+            return res.get("alternatives", ["No specific alternatives found. Please consult a healthcare professional."])
         return ["Unable to fetch alternatives from Gemini API. Please consult a healthcare professional."]
     return ["Gemini API not available. Please consult a healthcare professional for alternatives."]
 def get_alternatives_and_interactions_via_gemini(drug: str, gemini=None) -> Dict[str, List[str]]:
